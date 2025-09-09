@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened]
     branches:
-      - develop # <--- CORREÇÃO: Removido espaço extra no final de 'develop'
+      - main # <--- CORREÇÃO: Removido espaço extra no final de 'develop'
 
 jobs:
   setup-issue:
