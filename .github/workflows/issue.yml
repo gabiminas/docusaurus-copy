@@ -1,0 +1,44 @@
+Name: Create the Definition of Done - DOD issue
+
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - main # <--- CORREÇÃO: Removido espaço extra no final de 'develop'
+
+jobs:
+  setup-issue:
+    runs-on: ubuntu-latest # <--- CORREÇÃO: 'github-ubuntu-2cores' não é um executor padrão. 'ubuntu-latest' é o correto.
+
+    # --- BLOCO ADICIONADO PARA PERMISSÕES ---
+    permissions:
+    issues: write # Necessário para criar e atribuir a issue
+    pull-requests: read # Necessário para ler o nome do autor do PR
+
+    steps:
+      - name: Get Token
+        id: get_workflow_token
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ secrets.APPLICATION_ID }} # <--- CORREÇÃO: Sintaxe correta para usar secrets
+          application_private_key: ${{ secrets.APP_PRIVATE_KEY }} # <--- CORREÇÃO: Sintaxe correta para usar secrets
+
+      # --- NOVO PASSO ADICIONADO PARA CRIAR A ISSUE ---
+      - name: Create Issue From Template and Assign
+        id: create_issue
+        uses: JasonEtco/create-an-issue@v2
+        with:
+           token: ${{ steps.get_workflow_token.outputs.token }}
+           # Altere o nome do arquivo abaixo para o nome do seu template
+           filename: .github/ISSUE_TEMPLATE/todo.md
+           # Atribui a issue a quem abriu o PR
+           assignees: ${{ github.event.pull_request.user.login }}
+           # Define um título dinâmico para a issue
+           title: "DOD para o PR #${{ github.event.pull_request.number }}"
+
+      - uses: actions/add-to-project@v0.3.0
+        with:
+          project-url: https://github.com/users/gabiminas/projects/1/views/1 # <--- CORREÇÃO: 'qithub.com' corrigido para 'github.com'
+          github-token: ${{ steps.get_workflow_token.outputs.token }}
+          # Linha adicionada para identificar QUAL issue adicionar ao projeto
+          project-target-id: ${{ steps.create_issue.outputs.node_id }}
