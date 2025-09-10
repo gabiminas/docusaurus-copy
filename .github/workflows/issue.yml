@@ -50,10 +50,11 @@ jobs:
 
             console.log(`Issue criada: ${issue.html_url}`);
             core.setOutput('issue_node_id', issue.node_id);
+            core.setOutput('issue_id', issue.id);
 
       - name: Add to Project
         uses: actions/add-to-project@v1.0.1 # Versão corrigida
         with:
           project-url: https://github.com/users/gabiminas/projects/1
           github-token: ${{ steps.get_workflow_token.outputs.token }}
-          project-target-id: ${{ steps.create_issue.outputs.issue_node_id }}
+          issue-number: ${{ github.event.pull_request.number }}
