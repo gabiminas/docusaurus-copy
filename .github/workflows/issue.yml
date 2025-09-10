@@ -1,10 +1,11 @@
-#name: Create the Definition of Done - DOD issue
+#name: Criar a issue de Definition of Done (DOD)
 #
 #on:
 #  pull_request:
 #    types: [opened]
 #    branches:
 #      - main
+#  workflow_dispatch:
 #
 #jobs:
 #  setup-issue:
@@ -26,54 +27,75 @@
 #          application_id: ${{ secrets.APPLICATION_ID }}
 #          application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 #
-#      - name: Create Issue and Add to Project
+#      - name: Criar Issue e Adicionar ao Projeto
 #        uses: actions/github-script@v6
 #        with:
 #          github-token: ${{ steps.get_workflow_token.outputs.token }}
 #          script: |
-#            const fs = require('fs');
-#            const issueTemplate = fs.readFileSync('.github/ISSUE_TEMPLATE/todo.md', 'utf8');
-#            const prNumber = context.payload.pull_request.number;
-#            const prAuthor = context.payload.pull_request.user.login;
-#            const newTitle = `DOD para o PR #${prNumber}`;
-#            const newBody = issueTemplate;
-#            const assignees = [prAuthor];
+#            const isManualRun = context.eventName === 'workflow_dispatch';
+#            console.log('Workflow executado pelo evento: ' + context.eventName);
 #
 #            const projectUrl = 'https://github.com/users/gabiminas/projects/1';
 #            const urlParts = projectUrl.split('/');
-#            const ownerType = urlParts[3]; // 'users' ou 'orgs'
+#            const ownerType = urlParts[3];
 #            const owner = urlParts[4];
 #            const projectNumber = parseInt(urlParts[6]);
 #
-#            // Passo 1: Busca o ID do ProjectV2 via GraphQL
+#            console.log('--- Informações de Diagnóstico ---');
+#            console.log('Tentando aceder ao projeto #' + projectNumber + ' do dono \'' + owner + '\' (Tipo: ' + ownerType + ')');
+#            console.log('Repositório atual: ' + context.repo.owner + '/' + context.repo.repo);
+#            console.log('---------------------------------');
+#
 #            let projectV2Id;
-#            if (ownerType === 'orgs') {
-#              const { organization } = await github.graphql(`
-#                query($owner: String!, $projectNumber: Int!) {
-#                  organization(login: $owner) {
-#                    projectV2(number: $projectNumber) {
-#                      id
+#            try {
+#              const query = ownerType === 'orgs'
+#                ? `query($owner: String!, $projectNumber: Int!) {
+#                    organization(login: $owner) {
+#                      projectV2(number: $projectNumber) {
+#                        id
+#                      }
 #                    }
-#                  }
-#                }
-#              `, { owner, projectNumber });
-#              projectV2Id = organization.projectV2.id;
-#            } else {
-#              const { user } = await github.graphql(`
-#                query($owner: String!, $projectNumber: Int!) {
-#                  user(login: $owner) {
-#                    projectV2(number: $projectNumber) {
-#                      id
+#                  }`
+#                : `query($owner: String!, $projectNumber: Int!) {
+#                    user(login: $owner) {
+#                      projectV2(number: $projectNumber) {
+#                        id
+#                      }
 #                    }
-#                  }
-#                }
-#              `, { owner, projectNumber });
-#              projectV2Id = user.projectV2.id;
+#                  }`;
+#
+#              const result = await github.graphql(query, { owner, projectNumber });
+#              projectV2Id = (ownerType === 'orgs') ? result.organization?.projectV2?.id : result.user?.projectV2?.id;
+#
+#              if (!projectV2Id) {
+#                throw new Error("A consulta GraphQL retornou um ID nulo.");
+#              }
+#              console.log('Sucesso! Project V2 ID encontrado: ' + projectV2Id);
+#
+#            } catch (error) {
+#              console.error("Erro detalhado na consulta GraphQL:", JSON.stringify(error, null, 2));
+#              core.setFailed(
+#                '========================================================================\n' +
+#                'FALHA AO ENCONTRAR O PROJETO!\n\n' +
+#                'Causa Provável: O GitHub App não está instalado corretamente ou não tem permissão para acessar o projeto.\n\n' +
+#                'Solução:\n' +
+#                '1. Vá para as configurações do utilizador \'' + owner + '\'.\n' +
+#                '2. Vá para \'Settings\' > \'Applications\' > \'Installed GitHub Apps\'.\n' +
+#                '3. Encontre o seu App e clique em \'Configure\'.\n' +
+#                '4. Na seção \'Repository access\', certifique-se de que o App tem acesso a este repositório (\'' + context.repo.repo + '\').\n' +
+#                '5. Verifique se o App foi instalado no dono do projeto (usuário ou organização).\n' +
+#                '========================================================================'
+#              );
+#              return;
 #            }
 #
-#            console.log(`Project V2 ID: ${projectV2Id}`);
+#            // Se o código chegou aqui, o projeto foi encontrado. Continuamos...
+#            const prNumber = isManualRun ? 'TESTE_MANUAL' : context.payload.pull_request.number;
+#            const prAuthor = isManualRun ? context.actor : context.payload.pull_request.user.login;
+#            const newTitle = 'DOD para o PR #' + prNumber;
+#            const assignees = [prAuthor];
+#            const newBody = 'Definição de Done para o Pull Request #' + prNumber + '.';
 #
-#            // Passo 2: Cria a issue
 #            const { data: issue } = await github.rest.issues.create({
 #              owner: context.repo.owner,
 #              repo: context.repo.repo,
@@ -81,10 +103,8 @@
 #              body: newBody,
 #              assignees: assignees
 #            });
+#            console.log('Issue criada com sucesso: ' + issue.html_url);
 #
-#            console.log(`Issue criada: ${issue.html_url}`);
-#
-#            // Passo 3: Adiciona a issue ao projeto de forma síncrona
 #            await github.graphql(`
 #              mutation($projectV2Id: ID!, $issueNodeId: ID!) {
 #                addProjectV2ItemById(input: {contentId: $issueNodeId, projectId: $projectV2Id}) {
@@ -93,6 +113,9 @@
 #                  }
 #                }
 #              }
-#            `, { projectV2Id, issueNodeId: issue.node_id });
+#            `, {
+#              projectV2Id,
+#              issueNodeId: issue.node_id
+#            });
 #
-#            console.log(`Issue adicionada ao projeto de ID: ${projectV2Id}`);
+#            console.log('Issue adicionada com sucesso ao projeto.');

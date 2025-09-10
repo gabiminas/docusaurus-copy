@@ -1,0 +1,81 @@
+name: Definition of Done (DoD)
+description: Template para definição de "Pronto" de uma tarefa (História, Bug, etc).
+title: "[DoD] - [Nome da Tarefa]"
+labels:
+  - dod
+  - checklist
+  - done
+assignees:
+  - ${{ github.event.issue.user.login }}
+projects:
+  - 1
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### **Visão Geral**
+        Descreva brevemente o item de trabalho (história de usuário, bug, etc.) ao qual este DoD se aplica.
+  - type: textarea
+    id: overview
+    attributes:
+      label: Descrição da Tarefa
+      description: |
+        Descreva aqui o item de trabalho ao qual este DoD se aplica.
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ### **Critérios de Aceitação**
+        Liste aqui todos os critérios de aceitação da tarefa. Eles devem ser cumpridos para que a tarefa seja considerada pronta.
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Critérios de Aceitação
+      description: |
+        - [ ] Critério 1
+        - [ ] Critério 2
+        - [ ] Critério 3
+
+  - type: markdown
+    attributes:
+      value: |
+        ### **Checklist de Definição de Concluído (DoD)**
+        Esta é a checklist padrão que deve ser revisada e confirmada antes de fechar a issue.
+
+  - type: checkboxes
+    id: dod-checklist
+    attributes:
+      label: Checklist de DoD
+      description: |
+        Marque os itens abaixo conforme forem concluídos.
+      options:
+        - label: "**Código:** O código foi revisado por pelo menos um colega (Code Review)."
+          required: true
+        - label: "**Testes:** Foram criados e executados testes automatizados (unitários, de integração, etc.)."
+          required: true
+        - label: "**Documentação:** A documentação técnica (se aplicável) foi atualizada."
+          required: true
+        - label: "**Ambiente:** O código foi testado no ambiente de staging ou de homologação."
+          required: true
+        - label: "**Performance:** Não há degradação perceptível de performance."
+          required: true
+        - label: "**Segurança:** Não há vulnerabilidades de segurança conhecidas."
+          required: true
+        - label: "**PR:** O Pull Request foi aprovado e o código foi mergeado para a branch principal."
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ### **Notas Adicionais**
+        Qualquer observação extra ou ponto de atenção que não se encaixe nos tópicos acima.
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Notas Adicionais
+      description: "Qualquer observação extra ou ponto de atenção."
+      placeholder: "Adicione notas aqui..."
