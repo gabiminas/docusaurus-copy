@@ -13,8 +13,13 @@ jobs:
     permissions:
       issues: write
       pull-requests: read
+      contents: read # Adicionar permissão de leitura para o checkout
 
     steps:
+      # --- PASSO ADICIONADO ---
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Get Token
         id: get_workflow_token
         uses: peter-murray/workflow-application-token-action@v2
@@ -23,6 +28,7 @@ jobs:
           application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Create Issue From Template and Assign
+        id: create_issue # O 'id' foi mantido para a próxima etapa
         uses: actions/github-script@v6
         with:
           github-token: ${{ steps.get_workflow_token.outputs.token }}
@@ -44,7 +50,6 @@ jobs:
             });
 
             console.log(`Issue criada: ${issue.html_url}`);
-            // Armazena o ID do nó da issue para a próxima etapa
             core.setOutput('issue_node_id', issue.node_id);
 
       - name: Add to Project
@@ -52,4 +57,4 @@ jobs:
         with:
           project-url: https://github.com/users/gabiminas/projects/1/views/1
           github-token: ${{ steps.get_workflow_token.outputs.token }}
-          project-target-id: ${{ steps.create_issue.outputs.node_id }}
+          project-target-id: ${{ steps.create_issue.outputs.issue_node_id }}
