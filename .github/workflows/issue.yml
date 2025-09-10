@@ -49,8 +49,20 @@ jobs:
             let projectV2Id;
             try {
               const query = ownerType === 'orgs'
-                ? query($owner: String!, $projectNumber: Int!) { organization(login: $owner) { projectV2(number: $projectNumber) { id } } }
-                : query($owner: String!, $projectNumber: Int!) { user(login: $owner) { projectV2(number: $projectNumber) { id } } };
+                ? `query($owner: String!, $projectNumber: Int!) {
+                    organization(login: $owner) {
+                      projectV2(number: $projectNumber) {
+                        id
+                      }
+                    }
+                  }`
+                : `query($owner: String!, $projectNumber: Int!) {
+                    user(login: $owner) {
+                      projectV2(number: $projectNumber) {
+                        id
+                      }
+                    }
+                  }`;
 
               const result = await github.graphql(query, { owner, projectNumber });
               projectV2Id = (ownerType === 'orgs') ? result.organization?.projectV2?.id : result.user?.projectV2?.id;
@@ -85,13 +97,25 @@ jobs:
             const newBody = 'Definição de Done para o Pull Request #' + prNumber + '.';
 
             const { data: issue } = await github.rest.issues.create({
-              owner: context.repo.owner, repo: context.repo.repo, title: newTitle, body: newBody, assignees: assignees
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: newTitle,
+              body: newBody,
+              assignees: assignees
             });
             console.log('Issue criada com sucesso: ' + issue.html_url);
 
             await github.graphql(`
               mutation($projectV2Id: ID!, $issueNodeId: ID!) {
-                addProjectV2ItemById(input: {contentId: $issueNodeId, projectId: $projectV2Id}) { item { id } }
+                addProjectV2ItemById(input: {contentId: $issueNodeId, projectId: $projectV2Id}) {
+                  item {
+                    id
+                  }
+                }
               }
-            `, { projectV2Id, issueNodeId: issue.node_id });
+            `, {
+              projectV2Id,
+              issueNodeId: issue.node_id
+            });
+
             console.log('Issue adicionada com sucesso ao projeto.');
