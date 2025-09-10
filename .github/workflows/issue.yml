@@ -23,15 +23,32 @@ jobs:
           application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Create Issue From Template and Assign
-        id: create_issue
-        uses: JasonEtco/create-an-issue@v2
+        uses: actions/github-script@v6
         with:
-           token: ${{ steps.get_workflow_token.outputs.token }}
-           filename: .github/ISSUE_TEMPLATE/todo.md
-           assignees: ${{ github.event.pull_request.user.login }}
-           title: "DOD para o PR #${{ github.event.pull_request.number }}"
+          github-token: ${{ steps.get_workflow_token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const issueTemplate = fs.readFileSync('.github/ISSUE_TEMPLATE/todo.md', 'utf8');
+            const prNumber = context.payload.pull_request.number;
+            const prAuthor = context.payload.pull_request.user.login;
+            const newTitle = `DOD para o PR #${prNumber}`;
+            const newBody = issueTemplate;
+            const assignees = [prAuthor];
 
-      - uses: actions/add-to-project@v0.3.0
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: newTitle,
+              body: newBody,
+              assignees: assignees
+            });
+
+            console.log(`Issue criada: ${issue.html_url}`);
+            // Armazena o ID do nó da issue para a próxima etapa
+            core.setOutput('issue_node_id', issue.node_id);
+
+      - name: Add to Project
+        uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/users/gabiminas/projects/1/views/1
           github-token: ${{ steps.get_workflow_token.outputs.token }}
