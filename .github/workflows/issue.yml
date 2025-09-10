@@ -17,17 +17,17 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout repository
+      - name: Checkout do repositório
         uses: actions/checkout@v4
 
-      - name: Get Token
+      - name: Obter Token de Autenticação do App
         id: get_workflow_token
         uses: peter-murray/workflow-application-token-action@v2
         with:
           application_id: ${{ secrets.APPLICATION_ID }}
           application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Create Issue and Add to Project
+      - name: Criar Issue e Adicionar ao Projeto
         uses: actions/github-script@v6
         with:
           github-token: ${{ steps.get_workflow_token.outputs.token }}
@@ -40,7 +40,7 @@ jobs:
             const ownerType = urlParts[3];
             const owner = urlParts[4];
             const projectNumber = parseInt(urlParts[6]);
-
+            
             console.log(--- Informações de Diagnóstico ---);
             console.log(Tentando aceder ao projeto #${projectNumber} do dono '${owner}' (Tipo: ${ownerType}));
             console.log(Repositório atual: ${context.repo.owner}/${context.repo.repo});
@@ -54,7 +54,7 @@ jobs:
 
               const result = await github.graphql(query, { owner, projectNumber });
               projectV2Id = (ownerType === 'orgs') ? result.organization?.projectV2?.id : result.user?.projectV2?.id;
-
+              
               if (!projectV2Id) {
                 throw new Error("A consulta GraphQL retornou um ID nulo.");
               }
@@ -65,15 +65,15 @@ jobs:
               core.setFailed(`
                 ========================================================================
                 FALHA AO ENCONTRAR O PROJETO!
-
+                
                 Causa Provável: O GitHub App não está instalado corretamente.
-
+                
                 Solução:
                 1. Vá para as configurações do utilizador '${owner}'.
                 2. Vá para 'Settings' > 'Applications' > 'Installed GitHub Apps'.
                 3. Encontre o seu App e clique em 'Configure'.
                 4. Na seção 'Repository access', certifique-se de que o App tem acesso a este repositório ('${context.repo.repo}').
-
+                
                 Se o App foi instalado numa organização, verifique as configurações da organização. O App DEVE ser instalado no dono do projeto.
                 ========================================================================
               `);
