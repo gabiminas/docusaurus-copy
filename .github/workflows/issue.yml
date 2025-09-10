@@ -27,7 +27,6 @@ jobs:
           application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Create Issue and Add to Project
-        id: create_issue
         uses: actions/github-script@v6
         with:
           github-token: ${{ steps.get_workflow_token.outputs.token }}
@@ -42,24 +41,37 @@ jobs:
 
             const projectUrl = 'https://github.com/users/gabiminas/projects/1';
             const urlParts = projectUrl.split('/');
+            const ownerType = urlParts[3]; // 'users' ou 'orgs'
             const owner = urlParts[4];
             const projectNumber = parseInt(urlParts[6]);
 
             // Passo 1: Busca o ID do ProjectV2 via GraphQL
-            const { user } = await github.graphql(`
-              query($owner: String!, $projectNumber: Int!) {
-                user(login: $owner) {
-                  projectV2(number: $projectNumber) {
-                    id
+            let projectV2Id;
+            if (ownerType === 'orgs') {
+              const { organization } = await github.graphql(`
+                query($owner: String!, $projectNumber: Int!) {
+                  organization(login: $owner) {
+                    projectV2(number: $projectNumber) {
+                      id
+                    }
                   }
                 }
-              }
-            `, { owner, projectNumber });
+              `, { owner, projectNumber });
+              projectV2Id = organization.projectV2.id;
+            } else { // Caso seja um projeto de usuário
+              const { user } = await github.graphql(`
+                query($owner: String!, $projectNumber: Int!) {
+                  user(login: $owner) {
+                    projectV2(number: $projectNumber) {
+                      id
+                    }
+                  }
+                }
+              `, { owner, projectNumber });
+              projectV2Id = user.projectV2.id;
+            }
 
-            const projectV2Id = user.projectV2.id;
             console.log(`Project V2 ID: ${projectV2Id}`);
-            console.log(`owner: ${owner}`);
-            console.log(`projectNumber: ${projectNumber}`);
 
             // Passo 2: Cria a issue
             const { data: issue } = await github.rest.issues.create({
