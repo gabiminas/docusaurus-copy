@@ -1,98 +1,98 @@
-name: Create the Definition of Done - DOD issue
-
-on:
-  pull_request:
-    types: [opened]
-    branches:
-      - main
-
-jobs:
-  setup-issue:
-    runs-on: ubuntu-latest
-
-    permissions:
-      issues: write
-      pull-requests: read
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get Token
-        id: get_workflow_token
-        uses: peter-murray/workflow-application-token-action@v2
-        with:
-          application_id: ${{ secrets.APPLICATION_ID }}
-          application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Create Issue and Add to Project
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ steps.get_workflow_token.outputs.token }}
-          script: |
-            const fs = require('fs');
-            const issueTemplate = fs.readFileSync('.github/ISSUE_TEMPLATE/todo.md', 'utf8');
-            const prNumber = context.payload.pull_request.number;
-            const prAuthor = context.payload.pull_request.user.login;
-            const newTitle = `DOD para o PR #${prNumber}`;
-            const newBody = issueTemplate;
-            const assignees = [prAuthor];
-
-            const projectUrl = 'https://github.com/users/gabiminas/projects/1';
-            const urlParts = projectUrl.split('/');
-            const ownerType = urlParts[3]; // 'users' ou 'orgs'
-            const owner = urlParts[4];
-            const projectNumber = parseInt(urlParts[6]);
-
-            // Passo 1: Busca o ID do ProjectV2 via GraphQL
-            let projectV2Id;
-            if (ownerType === 'orgs') {
-              const { organization } = await github.graphql(`
-                query($owner: String!, $projectNumber: Int!) {
-                  organization(login: $owner) {
-                    projectV2(number: $projectNumber) {
-                      id
-                    }
-                  }
-                }
-              `, { owner, projectNumber });
-              projectV2Id = organization.projectV2.id;
-            } else {
-              const { user } = await github.graphql(`
-                query($owner: String!, $projectNumber: Int!) {
-                  user(login: $owner) {
-                    projectV2(number: $projectNumber) {
-                      id
-                    }
-                  }
-                }
-              `, { owner, projectNumber });
-              projectV2Id = user.projectV2.id;
-            }
-
-            console.log(`Project V2 ID: ${projectV2Id}`);
-
-            // Passo 2: Cria a issue
-            const { data: issue } = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: newTitle,
-              body: newBody,
-              assignees: assignees
-            });
-
-            console.log(`Issue criada: ${issue.html_url}`);
-
-            // Passo 3: Adiciona a issue ao projeto de forma síncrona
-            await github.graphql(`
-              mutation($projectV2Id: ID!, $issueNodeId: ID!) {
-                addProjectV2ItemById(input: {contentId: $issueNodeId, projectId: $projectV2Id}) {
-                  item {
-                    id
-                  }
-                }
-              }
-            `, { projectV2Id, issueNodeId: issue.node_id });
-
-            console.log(`Issue adicionada ao projeto de ID: ${projectV2Id}`);
+#name: Create the Definition of Done - DOD issue
+#
+#on:
+#  pull_request:
+#    types: [opened]
+#    branches:
+#      - main
+#
+#jobs:
+#  setup-issue:
+#    runs-on: ubuntu-latest
+#
+#    permissions:
+#      issues: write
+#      pull-requests: read
+#      contents: read
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Get Token
+#        id: get_workflow_token
+#        uses: peter-murray/workflow-application-token-action@v2
+#        with:
+#          application_id: ${{ secrets.APPLICATION_ID }}
+#          application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
+#
+#      - name: Create Issue and Add to Project
+#        uses: actions/github-script@v6
+#        with:
+#          github-token: ${{ steps.get_workflow_token.outputs.token }}
+#          script: |
+#            const fs = require('fs');
+#            const issueTemplate = fs.readFileSync('.github/ISSUE_TEMPLATE/todo.md', 'utf8');
+#            const prNumber = context.payload.pull_request.number;
+#            const prAuthor = context.payload.pull_request.user.login;
+#            const newTitle = `DOD para o PR #${prNumber}`;
+#            const newBody = issueTemplate;
+#            const assignees = [prAuthor];
+#
+#            const projectUrl = 'https://github.com/users/gabiminas/projects/1';
+#            const urlParts = projectUrl.split('/');
+#            const ownerType = urlParts[3]; // 'users' ou 'orgs'
+#            const owner = urlParts[4];
+#            const projectNumber = parseInt(urlParts[6]);
+#
+#            // Passo 1: Busca o ID do ProjectV2 via GraphQL
+#            let projectV2Id;
+#            if (ownerType === 'orgs') {
+#              const { organization } = await github.graphql(`
+#                query($owner: String!, $projectNumber: Int!) {
+#                  organization(login: $owner) {
+#                    projectV2(number: $projectNumber) {
+#                      id
+#                    }
+#                  }
+#                }
+#              `, { owner, projectNumber });
+#              projectV2Id = organization.projectV2.id;
+#            } else {
+#              const { user } = await github.graphql(`
+#                query($owner: String!, $projectNumber: Int!) {
+#                  user(login: $owner) {
+#                    projectV2(number: $projectNumber) {
+#                      id
+#                    }
+#                  }
+#                }
+#              `, { owner, projectNumber });
+#              projectV2Id = user.projectV2.id;
+#            }
+#
+#            console.log(`Project V2 ID: ${projectV2Id}`);
+#
+#            // Passo 2: Cria a issue
+#            const { data: issue } = await github.rest.issues.create({
+#              owner: context.repo.owner,
+#              repo: context.repo.repo,
+#              title: newTitle,
+#              body: newBody,
+#              assignees: assignees
+#            });
+#
+#            console.log(`Issue criada: ${issue.html_url}`);
+#
+#            // Passo 3: Adiciona a issue ao projeto de forma síncrona
+#            await github.graphql(`
+#              mutation($projectV2Id: ID!, $issueNodeId: ID!) {
+#                addProjectV2ItemById(input: {contentId: $issueNodeId, projectId: $projectV2Id}) {
+#                  item {
+#                    id
+#                  }
+#                }
+#              }
+#            `, { projectV2Id, issueNodeId: issue.node_id });
+#
+#            console.log(`Issue adicionada ao projeto de ID: ${projectV2Id}`);
