@@ -13,7 +13,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: read
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -26,8 +26,8 @@ jobs:
           application_id: ${{ secrets.APPLICATION_ID }}
           application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Create Issue From Template and Add Label
-        id: create_issue_and_label
+      - name: Create Issue From Template
+        id: create_issue
         uses: actions/github-script@v6
         with:
           github-token: ${{ steps.get_workflow_token.outputs.token }}
@@ -45,17 +45,15 @@ jobs:
               repo: context.repo.repo,
               title: newTitle,
               body: newBody,
-              assignees: assignees,
-              labels: ['to-project']
+              assignees: assignees
             });
 
             console.log(`Issue criada: ${issue.html_url}`);
-            core.setOutput('issue_id', issue.id);
+            core.setOutput('issue_node_id', issue.node_id);
 
       - name: Add to Project
-        uses: actions/add-to-project@v1.0.1
+        uses: actions/add-to-project@v0.6.1
         with:
-          project-url: https://github.com/users/gabiminas/projects/1
+          project-url: https://github.com/users/dado/projects/1
           github-token: ${{ steps.get_workflow_token.outputs.token }}
-          labeled: 'to-project'
-          label-operator: 'or'
+          issue-node-id: ${{ steps.create_issue.outputs.issue_node_id }}
