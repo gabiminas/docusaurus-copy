@@ -13,12 +13,9 @@ jobs:
     permissions:
       issues: write
       pull-requests: read
-      contents: read
+      contents: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Get Token
         id: get_workflow_token
         uses: peter-murray/workflow-application-token-action@v2
@@ -26,8 +23,8 @@ jobs:
           application_id: ${{ secrets.APPLICATION_ID }}
           application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Create Issue From Template and Assign
-        id: create_issue
+      - name: Create Issue From Template and Add Label
+        id: create_issue_and_label
         uses: actions/github-script@v6
         with:
           github-token: ${{ steps.get_workflow_token.outputs.token }}
@@ -45,16 +42,17 @@ jobs:
               repo: context.repo.repo,
               title: newTitle,
               body: newBody,
-              assignees: assignees
+              assignees: assignees,
+              labels: ['to-project']
             });
 
             console.log(`Issue criada: ${issue.html_url}`);
-            core.setOutput('issue_node_id', issue.node_id);
             core.setOutput('issue_id', issue.id);
 
       - name: Add to Project
-        uses: actions/add-to-project@v0.6.1
+        uses: actions/add-to-project@v1.0.1
         with:
           project-url: https://github.com/users/gabiminas/projects/1
           github-token: ${{ steps.get_workflow_token.outputs.token }}
-          issue-node-id: ${{ steps.create_issue.outputs.issue_node_id }}
+          labeled: 'to-project'
+          label-operator: 'or'
