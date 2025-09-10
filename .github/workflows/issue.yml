@@ -58,7 +58,7 @@ jobs:
                 }
               `, { owner, projectNumber });
               projectV2Id = organization.projectV2.id;
-            } else { // Caso seja um projeto de usuário
+            } else {
               const { user } = await github.graphql(`
                 query($owner: String!, $projectNumber: Int!) {
                   user(login: $owner) {
