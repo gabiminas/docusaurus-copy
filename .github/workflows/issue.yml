@@ -54,6 +54,6 @@ jobs:
       - name: Add to Project
         uses: actions/add-to-project@v0.6.1
         with:
-          project-url: https://github.com/users/dado/projects/1
+          project-url: https://github.com/users/gabiminas/projects/1
           github-token: ${{ steps.get_workflow_token.outputs.token }}
           issue-node-id: ${{ steps.create_issue.outputs.issue_node_id }}
