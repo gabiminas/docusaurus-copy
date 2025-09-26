@@ -43,7 +43,7 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
 
           # Atribuir a issue ao autor do PR
-          gh issue edit $ISSUE_NUMBER --assign "${{ env.PR_AUTHOR }}"
+          gh issue edit $ISSUE_NUMBER --add-assignee "${{ env.PR_AUTHOR }}"
 
           # Adicionar a issue ao projeto (substitua pelo ID do seu projeto)
           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
