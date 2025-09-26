@@ -14,11 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create Issue and Add to Project
+      - name: Create Issue
         id: create_issue 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }} # Login do autor do PR
           ISSUE_BODY: |
             Pull Request #${{ github.event.pull_request.number }} foi aberto.
 
@@ -41,10 +42,12 @@ jobs:
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
 
-          # Adicionar a issue ao projeto (usando a API)
-          # Substitua `PROJECT_ID` pelo ID do seu projeto
+          # Atribuir a issue ao autor do PR
+          gh issue edit $ISSUE_NUMBER --assign "${{ env.PR_AUTHOR }}"
+
+          # Adicionar a issue ao projeto (substitua pelo ID do seu projeto)
           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-            -d '{"content_type":"Issue","content_id":'${ISSUE_NUMBER}',"project_id":1}' \
+            -d '{"content_type":"Issue","content_id":'${ISSUE_NUMBER}',"project_id":12345678}' \
             https://api.github.com/repos/${{ github.repository }}/projects/columns/cards
 
       - name: Link PR to Issue
