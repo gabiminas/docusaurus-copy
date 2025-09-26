@@ -36,7 +36,7 @@ jobs:
           ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
                                      --body "${{ env.ISSUE_BODY }}" \
                                      --label "to-project" \
-                                     --project "gabiminas/projects/1")
+                                     --project "https://github.com/users/gabiminas/projects/1")
           
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
