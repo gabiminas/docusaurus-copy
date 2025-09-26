@@ -11,7 +11,6 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-      projects: write # <-- ESSENCIAL para acessar projetos de usuário/organização
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,7 +36,7 @@ jobs:
           ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
                                      --body "${{ env.ISSUE_BODY }}" \
                                      --label "to-project" \
-                                     --project "gabiminas/DOD")
+                                     --project "1")
           
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
