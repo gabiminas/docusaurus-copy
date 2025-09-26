@@ -10,16 +10,18 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
+      contents: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create Issue
+      - name: Criar Issue
         id: create_issue 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }} # Login do autor do PR
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           ISSUE_BODY: |
             Pull Request #${{ github.event.pull_request.number }} foi aberto.
 
@@ -33,36 +35,62 @@ jobs:
             - [ ] Os testes unitários foram criados/atualizados e estão passando?
             - [ ] A funcionalidade foi testada manualmente?
         run: |
-          # Criação da Issue
-          ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
-                                     --body "${{ env.ISSUE_BODY }}" \
-                                     --label "to-project") 
+          ISSUE_URL=$(gh issue create \
+            --title "Revisão do PR: ${{ env.PR_TITLE }}" \
+            --body "${{ env.ISSUE_BODY }}" \
+            --label "to-project")
 
-          # Extrair o número da issue
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
-          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
 
           # Atribuir a issue ao autor do PR
-          gh issue edit $ISSUE_NUMBER --add-assignee "${{ env.PR_AUTHOR }}"
+          gh issue edit "$ISSUE_NUMBER" --add-assignee "${{ env.PR_AUTHOR }}"
 
-          # Adicionar a issue ao projeto (substitua pelo ID do seu projeto)
-          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-            -d '{"content_type":"Issue","content_id":'${ISSUE_NUMBER}',"project_id":1}' \
-            https://api.github.com/repos/${{ github.repository }}/projects/columns/cards
-
-      - name: Link PR to Issue
+      - name: Vincular PR à Issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          # Obter o corpo atual do PR usando a API do GitHub
           PR_BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body -q ".body")
-
-          # Adicionar a referência à issue no final do corpo
           UPDATED_BODY="${PR_BODY}\n\nCloses #${ISSUE_NUMBER}"
-
-          # Atualizar o corpo do PR
           gh pr edit "$PR_NUMBER" --repo "$REPO" --body "$UPDATED_BODY"
 
+      - name: Obter Project ID dinamicamente (usuário)
+        id: get_project_id
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          USER="gabiminas"
+          PROJECT_NUMBER=1
+
+          PROJECT_ID=$(gh api graphql -f query="
+            {
+              user(login: \"$USER\") {
+                projectV2(number: $PROJECT_NUMBER) {
+                  id
+                }
+              }
+            }
+          " --jq '.data.user.projectV2.id')
+
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Adicionar Issue ao Projeto (GitHub Projects Beta)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
+          REPO: ${{ github.repository }}
+          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
+        run: |
+          ISSUE_NODE_ID=$(gh api "repos/$REPO/issues/$ISSUE_NUMBER" --jq '.node_id')
+
+          gh api graphql -f query='
+            mutation($projectId: ID!, $contentId: ID!) {
+              addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                item {
+                  id
+                }
+              }
+            }' -f projectId=$PROJECT_ID -f contentId=$ISSUE_NODE_ID
