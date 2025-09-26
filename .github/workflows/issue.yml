@@ -11,13 +11,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      # PASSO ADICIONADO PARA CORRIGIR O ERRO
-      - name: Update GitHub CLI to the latest version
-        run: |
-          sudo apt-get update
-          sudo apt-get install --only-upgrade -y gh
-
-      - name: Create Issue with Checklist
+      - name: Create Issue and Add to Project
         id: create_issue 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -35,23 +29,16 @@ jobs:
             - [ ] Os testes unitários foram criados/atualizados e estão passando?
             - [ ] A funcionalidade foi testada manualmente?
         run: |
-          ISSUE_OUTPUT=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
-                                        --body "${{ env.ISSUE_BODY }}" \
-                                        --label "revisão-pr" \
-                                        --json number,id)
+          # Cria a issue, já adicionando ao projeto com a flag -p
+          # A saída padrão deste comando é a URL da nova issue
+          ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
+                                     --body "${{ env.ISSUE_BODY }}" \
+                                     --label "revisão-pr" \
+                                     --project "DOD")
           
-          ISSUE_NUMBER=$(echo $ISSUE_OUTPUT | jq --raw-output .number)
-          ISSUE_ID=$(echo $ISSUE_OUTPUT | jq --raw-output .id)
+          # Extrai o número da issue a partir da URL e o define como saída
+          ISSUE_NUMBER=$(basename "$ISSUE_URL")
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-          echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
-
-      - name: Add Issue to Project
-        uses: actions/add-to-project@v0.5.0
-        with:
-          # IMPORTANTE: Substitua pela URL do seu projeto!
-          project-url: "https://github.com/users/gabiminas/projects/1"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          content-id: ${{ steps.create_issue.outputs.issue_id }}
 
       - name: Link PR to Issue
         env:
