@@ -1,85 +1,49 @@
-name: Create, Link, and Add Issue to Project from PR
+name: Create Issue from Pull Request
 
+# Aciona o workflow sempre que um PR for aberto para a branch 'main'
 on:
   pull_request:
     types: [opened]
+    branches:
+      - main
 
 jobs:
-  create_link_and_add:
+  create_centralized_issue:
     runs-on: ubuntu-latest
     permissions:
-      issues: write
-      pull-requests: write
-      contents: read
+      issues: write        # Permissão para criar issues
+      pull-requests: read  # Permissão para ler dados do PR
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Criar Issue
-        id: create_issue 
+      - name: Create Centralized Issue
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          # Token de acesso pessoal. É necessário para criar uma issue em OUTRO repositório.
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          # Nome do seu repositório central (usuário/nome-do-repo)
+          CENTRAL_REPO: "gabiminas/repo-central"
+          # Título para a nova issue
+          ISSUE_TITLE: "PR Aberto: ${{ github.event.pull_request.title }}"
+          # Corpo para a nova issue
           ISSUE_BODY: |
-            Pull Request #${{ github.event.pull_request.number }} foi aberto.
-
-            *Link para o PR:* ${{ github.event.pull_request.html_url }}
-
+            ### Novo Pull Request Aberto
+            - *Repositório:* ${{ github.repository }}
+            - *PR Original:* [${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
+            - *Autor:* @${{ github.actor }}
+            
             ---
+            
+            #### Checklist de Revisão
+            - [ ] Revisão de código concluída
+            - [ ] Testes automatizados passaram
+            - [ ] Documentação atualizada
 
-            ### Checklist de Revisão
-            - [ ] O código segue os padrões do projeto?
-            - [ ] A documentação foi atualizada?
-            - [ ] Os testes unitários foram criados/atualizados e estão passando?
-            - [ ] A funcionalidade foi testada manualmente?
         run: |
-          ISSUE_URL=$(gh issue create \
-            --title "Revisão do PR: ${{ env.PR_TITLE }}" \
-            --body "${{ env.ISSUE_BODY }}" \
-            --label "to-project")
+          echo "Criando issue no repositório ${CENTRAL_REPO}..."
 
-          ISSUE_NUMBER=$(basename "$ISSUE_URL")
-          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          # Usa a CLI do GitHub para criar a issue diretamente no repositório central
+          gh issue create --title "$ISSUE_TITLE" --body "$ISSUE_BODY" --repo $CENTRAL_REPO
 
-          # Atribuir a issue ao autor do PR
-          gh issue edit "$ISSUE_NUMBER" --add-assignee "${{ env.PR_AUTHOR }}"
-
-      - name: Vincular PR à Issue
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body -q ".body")
-          UPDATED_BODY="${PR_BODY}\n\nCloses #${ISSUE_NUMBER}"
-          gh pr edit "$PR_NUMBER" --repo "$REPO" --body "$UPDATED_BODY"
-
-      - name: Obter Project ID (clássico)
-        id: get_project_id
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          USER="gabiminas"
-          PROJECT_NAME="DOD"  # Nome do seu projeto clássico
-
-          # Buscar o ID do projeto clássico
-          PROJECT_ID=$(gh api "/repos/$REPO/projects" --jq ".[] | select(.name == \"$PROJECT_NAME\") | .id")
-
-          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Adicionar Issue ao Projeto (GitHub Projects Clássico)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
-          REPO: ${{ github.repository }}
-          PROJECT_ID: ${{ steps.get_project_id.outputs.project_id }}
-        run: |
-          ISSUE_NODE_ID=$(gh api "repos/$REPO/issues/$ISSUE_NUMBER" --jq '.node_id')
-
-          # Adicionar a issue ao projeto clássico
-          gh api "repos/$REPO/projects/$PROJECT_ID/columns/cards" \
-            -X POST \
-            -d "{\"content_id\": \"$ISSUE_NODE_ID\"}"
+          echo "Issue criada com sucesso no repositório ${CENTRAL_REPO}!"
