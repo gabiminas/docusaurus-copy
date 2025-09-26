@@ -7,11 +7,12 @@ on:
 jobs:
   create_link_and_add:
     runs-on: ubuntu-latest
+    # PERMISSÃO ADICIONADA AQUI
     permissions:
       issues: write
       pull-requests: write
+      projects: write # <-- ESSENCIAL para acessar projetos de usuário/organização
     steps:
-      # PASSO ADICIONADO PARA CORRIGIR O ERRO
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -36,7 +37,7 @@ jobs:
           ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
                                      --body "${{ env.ISSUE_BODY }}" \
                                      --label "to-project" \
-                                     --project "DOD")
+                                     --project "gabiminas/DOD")
           
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
