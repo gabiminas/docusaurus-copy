@@ -57,27 +57,20 @@ jobs:
           UPDATED_BODY="${PR_BODY}\n\nCloses #${ISSUE_NUMBER}"
           gh pr edit "$PR_NUMBER" --repo "$REPO" --body "$UPDATED_BODY"
 
-      - name: Obter Project ID dinamicamente (usuário)
+      - name: Obter Project ID (clássico)
         id: get_project_id
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           USER="gabiminas"
-          PROJECT_NUMBER=1
+          PROJECT_NAME="DOD"  # Nome do seu projeto clássico
 
-          PROJECT_ID=$(gh api graphql -f query="
-            {
-              user(login: \"$USER\") {
-                projectV2(number: $PROJECT_NUMBER) {
-                  id
-                }
-              }
-            }
-          " --jq '.data.user.projectV2.id')
+          # Buscar o ID do projeto clássico
+          PROJECT_ID=$(gh api "/repos/$REPO/projects" --jq ".[] | select(.name == \"$PROJECT_NAME\") | .id")
 
           echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Adicionar Issue ao Projeto (GitHub Projects Beta)
+      - name: Adicionar Issue ao Projeto (GitHub Projects Clássico)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
@@ -86,11 +79,7 @@ jobs:
         run: |
           ISSUE_NODE_ID=$(gh api "repos/$REPO/issues/$ISSUE_NUMBER" --jq '.node_id')
 
-          gh api graphql -f query='
-            mutation($projectId: ID!, $contentId: ID!) {
-              addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-                item {
-                  id
-                }
-              }
-            }' -f projectId=$PROJECT_ID -f contentId=$ISSUE_NODE_ID
+          # Adicionar a issue ao projeto clássico
+          gh api "repos/$REPO/projects/$PROJECT_ID/columns/cards" \
+            -X POST \
+            -d "{\"content_id\": \"$ISSUE_NODE_ID\"}"
