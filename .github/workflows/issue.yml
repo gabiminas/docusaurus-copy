@@ -47,7 +47,7 @@ jobs:
 
           # Adicionar a issue ao projeto (substitua pelo ID do seu projeto)
           curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-            -d '{"content_type":"Issue","content_id":'${ISSUE_NUMBER}',"project_id":12345678}' \
+            -d '{"content_type":"Issue","content_id":'${ISSUE_NUMBER}',"project_id":1}' \
             https://api.github.com/repos/${{ github.repository }}/projects/columns/cards
 
       - name: Link PR to Issue
