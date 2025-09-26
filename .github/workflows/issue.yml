@@ -11,8 +11,14 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      # PASSO ADICIONADO PARA CORRIGIR O ERRO
+      - name: Update GitHub CLI to the latest version
+        run: |
+          sudo apt-get update
+          sudo apt-get install --only-upgrade -y gh
+
       - name: Create Issue with Checklist
-        id: create_issue # Damos um ID ao passo para usar suas saídas depois
+        id: create_issue 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_TITLE: ${{ github.event.pull_request.title }}
@@ -29,13 +35,11 @@ jobs:
             - [ ] Os testes unitários foram criados/atualizados e estão passando?
             - [ ] A funcionalidade foi testada manualmente?
         run: |
-          # Cria a issue e pede a saída em formato JSON para pegar o ID e o número
           ISSUE_OUTPUT=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
                                         --body "${{ env.ISSUE_BODY }}" \
                                         --label "revisão-pr" \
                                         --json number,id)
-
-          # Extrai o ID e o número da issue do JSON e os define como saídas do passo
+          
           ISSUE_NUMBER=$(echo $ISSUE_OUTPUT | jq --raw-output .number)
           ISSUE_ID=$(echo $ISSUE_OUTPUT | jq --raw-output .id)
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
@@ -47,7 +51,6 @@ jobs:
           # IMPORTANTE: Substitua pela URL do seu projeto!
           project-url: "https://github.com/users/gabiminas/projects/1"
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Usamos o ID da issue que foi criado no passo anterior
           content-id: ${{ steps.create_issue.outputs.issue_id }}
 
       - name: Link PR to Issue
@@ -55,7 +58,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BODY: ${{ github.event.pull_request.body }}
-          # Usamos o NÚMERO da issue que foi criado no primeiro passo
           ISSUE_NUMBER: ${{ steps.create_issue.outputs.issue_number }}
         run: |
           gh pr edit ${{ env.PR_NUMBER }} --body "${{ env.PR_BODY }}
