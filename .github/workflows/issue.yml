@@ -11,6 +11,10 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      # PASSO ADICIONADO PARA CORRIGIR O ERRO
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Create Issue and Add to Project
         id: create_issue 
         env:
@@ -29,14 +33,11 @@ jobs:
             - [ ] Os testes unitários foram criados/atualizados e estão passando?
             - [ ] A funcionalidade foi testada manualmente?
         run: |
-          # Cria a issue, já adicionando ao projeto com a flag -p
-          # A saída padrão deste comando é a URL da nova issue
           ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
                                      --body "${{ env.ISSUE_BODY }}" \
                                      --label "revisão-pr" \
                                      --project "DOD")
           
-          # Extrai o número da issue a partir da URL e o define como saída
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
           echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
 
