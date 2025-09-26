@@ -35,7 +35,7 @@ jobs:
         run: |
           ISSUE_URL=$(gh issue create --title "Revisão do PR: ${{ env.PR_TITLE }}" \
                                      --body "${{ env.ISSUE_BODY }}" \
-                                     --label "revisão-pr" \
+                                     --label "to-project" \
                                      --project "DOD")
           
           ISSUE_NUMBER=$(basename "$ISSUE_URL")
